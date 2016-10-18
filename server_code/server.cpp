@@ -157,7 +157,7 @@ void * ManageClient(void * arg) {
     }
     else {
       rc = write(client->soc, "Error: unrecognized command", 27);
-      if (rc != 0) {
+      if (rc == -1) {
         std::cout << "Unable to reply to client.\n";
       }
     }
