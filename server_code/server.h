@@ -25,13 +25,13 @@
 #include <vector>
 #include <tuple>
 #include <cstdlib>
-//#include "socket_api.h"
 
 #ifndef SOCKET_ERROR
 #define SOCKET_ERROR -1
 #endif
 
 #define USE_TCP 1
+#define FAKE_CLIENT 1
 
 struct Client {
     bool completed = false;
