@@ -17,7 +17,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <thread>
-#include <map>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -39,7 +38,6 @@ struct Client {
     sockaddr_in addr;
     socklen_t length;
     int soc = SOCKET_ERROR;
-    std::map< std::string, std::vector<int> > file_map;
 };
 
 static const int buff_size = 1024;
