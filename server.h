@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #endif
 
+#include <fstream>
+#include <dirent.h>
 #include <sys/stat.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -21,6 +23,7 @@
 #include <string.h>
 #include <iostream>
 #include <vector>
+#include <tuple>
 #include <cstdlib>
 //#include "socket_api.h"
 
@@ -51,9 +54,11 @@ std::vector<Client> clients;
 
 void * ListenForClose(void *);
 void * ManageClient(void * client);
-void ListFiles(Client * client, char * buffer);
-void GetFile(Client * client, char * buffer);
-void UpdateTracker(Client * client, char * buffer);
-void CreateTracker(Client * client, char * buffer);
+void ListFiles(Client * client, std::vector<std::string> &words);
+void GetFile(Client * client, std::vector<std::string> &words);
+void UpdateTracker(Client * client, std::vector<std::string> &words);
+void CreateTracker(Client * client, std::vector<std::string> &words);
+void ReadFileIntoLines(std::string path, std::vector<std::string> * lines);
+void BreakBySpaces(char * buffer, std::vector<std::string> * words);
 
 #endif
