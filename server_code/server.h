@@ -30,7 +30,7 @@
 #endif
 
 #define USE_TCP 1
-#define FAKE_CLIENT 1
+#define FAKE_CLIENT 0
 
 struct Client {
     bool completed = false;

@@ -13,6 +13,17 @@ int main() {
   std::cout << "Port: " << port << ", Folder: " << folder << "\n";
 
   //check if directory already exists
+  struct stat dirstat;
+  int stat_rc = stat(folder.c_str(), &dirstat);
+  if (stat_rc != 0 || (stat_rc == 0 && !S_ISDIR(dirstat.st_mode))) {
+    //need to create directory
+    std::cout << "Creating folder: " << folder << "\n";
+    int rc = mkdir(folder.c_str(), 0700);
+    if (rc != 0) {
+      std::cout << "Unable to create folder.\n";
+      return 0;
+    }
+  }
 
   if (FAKE_CLIENT) {
     std::cout << "\nRunning FakeClient through functions.\n";
