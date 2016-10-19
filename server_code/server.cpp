@@ -132,12 +132,13 @@ void * ListenForClose(void *) {
 
 void * ManageClient(void * arg) {
   Client * client = (Client *)arg;
+  if (client == NULL) pthread_exit(NULL);;
 
   //get message from the client
   char buffer[buff_size];
   int rc = read(client->soc, buffer, buff_size - 1);
   if (rc < 0) {
-    std::cout << "Error reading client message: " << rc << "\n";
+    std::cout << "Client " << client->soc << ": Error reading message.\n";
   }
   else {
     //sort client into correct functions based on request
@@ -156,6 +157,7 @@ void * ManageClient(void * arg) {
       CreateTracker(client, words);
     }
     else {
+      std::cout << "Client " << client->soc << ": unrecognized command.\n";
       rc = write(client->soc, "Error: unrecognized command", 27);
       if (rc == -1) {
         std::cout << "Unable to reply to client.\n";
