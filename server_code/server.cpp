@@ -126,6 +126,7 @@ void * ManageClient(void * arg) {
     std::cout << "Client message: " << buffer << "\n";
     std::vector<std::string> words;
     BreakBySpaces(buffer, &words);
+
     if ((int)words.size() > 1 && words.at(0) == "REQ") {
       ListFiles(client, words);
     }
@@ -207,13 +208,15 @@ void GetFile(Client * client, std::vector<std::string> &words) {
     return;
   }
   std::string filename = words.at(1);
-  filename = filename.substr(0, filename.length() - 7);
+  // filename = filename.substr(0, filename.length() - 7);
 
   std::vector<std::string> lines;
   ReadFileIntoLines(folder + "/" + filename, &lines);
   std::string md5 = "";
   if ((int)lines.size() > 4) md5 = lines.at(3).substr(5);
 
+
+  cout << filename << endl;
   std::string reply = "REP GET BEGIN\n";
   for (int i = 0; i < (int)lines.size(); i++) {
     reply.append(lines.at(i) + "\n");
