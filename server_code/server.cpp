@@ -5,36 +5,48 @@ using namespace std;
 int main() {
 
   //read config file
+  std::cout << "Reading server config file.\n";
   std::vector<std::string> config_lines;
   ReadFileIntoLines("sconfig", &config_lines);
   if (config_lines.size() > 0) port = stoi(config_lines.at(0)); //first line is port number
   if (config_lines.size() > 1) folder = config_lines.at(1); //second line is torrent folder
-/*
-  std::cout << "STARTING LISTFILES()\n";
-  std::vector<std::string> words0;
-  BreakBySpaces("REQ LIST\n", &words0);
-  ListFiles(NULL, words0);
-  std::cout << "COMPLETED LISTFILES()\n";
-  std::cout << "STARTING GETFILE()\n";
-  std::vector<std::string> words1;
-  BreakBySpaces("GET fake.txt.track\n", &words1);
-  GetFile(NULL, words1);
-  std::cout << "COMPLETED GETFILE()\n";
-  std::cout << "STARTING CREATETRACKER()\n";
-  std::vector<std::string> words2;
-  BreakBySpaces("createtracker filename.txt filesize description md5 ip-address port-number\n", &words2);
-  CreateTracker(NULL, words2);
-  std::cout << "COMPLETED CREATETRACKER()\n";
-  std::cout << "STARTING UPDATETRACKER()\n";
-  std::vector<std::string> words3;
-  BreakBySpaces("updatetracker filename.txt start_byte end_byte ip-address2 port-number2\n", &words3);
-  UpdateTracker(NULL, words3);
-  std::cout << "COMPLETED UPDATETRACKER()\n";
-*/
+  std::cout << "Port: " << port << ", Folder: " << folder << "\n";
+
+  //check if directory already exists
+  struct stat dirstat;
+  int stat_rc = stat(folder.c_str(), &dirstat);
+  if (stat_rc != 0 || (stat_rc == 0 && !S_ISDIR(dirstat.st_mode))) {
+    //need to create directory
+    std::cout << "Creating folder: " << folder << "\n";
+    int rc = mkdir(folder.c_str(), 0700);
+    if (rc != 0) {
+      std::cout << "Unable to create folder.\n";
+      return 0;
+    }
+  }
+
+  if (FAKE_CLIENT) {
+    std::cout << "\nRunning FakeClient through functions.\n";
+    std::vector<std::string> words0;
+    BreakBySpaces("REQ LIST\n", &words0);
+    ListFiles(NULL, words0);
+    std::vector<std::string> words1;
+    BreakBySpaces("GET fake.txt.track\n", &words1);
+    GetFile(NULL, words1);
+    std::vector<std::string> words2;
+    BreakBySpaces("createtracker filename.txt filesize description md5 ip-address port-number\n", &words2);
+    CreateTracker(NULL, words2);
+    std::vector<std::string> words3;
+    BreakBySpaces("updatetracker filename.txt start_byte end_byte ip-address2 port-number2\n", &words3);
+    UpdateTracker(NULL, words3);
+    std::cout << "FakeClient completed.\n\n";
+  }
+
   //create TCP server socket
+  std::cout << "Creating socket for server.\n";
   server_socket = socket(AF_INET, SOCK_STREAM, 0);
   if (server_socket == SOCKET_ERROR) {
-    std::cout << "SERVER socket creation failed\n";
+    std::cout << "Server socket creation failed.\n";
     return 0;
   }
 
@@ -52,13 +64,15 @@ int main() {
   #endif
 
   //bind socket to address
+  std::cout << "Binding socket to address.\n";
   bool cont = bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr));
   if (cont < 0) {
-    std::cout << "SERVER bind failed\n";
+    std::cout << "Server bind failed.\n";
     return 0;
   }
 
   //set server to listen; queue up to five clients while busy
+  std::cout << "Listening for clients.\n";
   listen(server_socket, 5);
 
   //create process that listens for when to close
@@ -73,6 +87,7 @@ int main() {
     Client client;
     client.soc = accept(server_socket, (struct sockaddr *)&client.addr, &client.length);
     if (client.soc != SOCKET_ERROR) {
+      std::cout << "New client accepted: " << client.soc << "\n";
       //client received: start thread
       clients.push_back(client);
       int rc = pthread_create(&clients.back().c_thread, NULL, ManageClient, (void *)&(clients.back()));
@@ -81,11 +96,13 @@ int main() {
       }
     }
   }
+  std::cout << "No longer listening for clients.\n";
 
   return 0;
 }
 
 void * ListenForClose(void *) {
+  std::cout << "Listening for stop command (\"close\").\n";
   //read in from the keyboard "close" command
   std::string input = "";
   do {
@@ -98,6 +115,7 @@ void * ListenForClose(void *) {
     }
   } while (!stopping);
 
+  std::cout << "Stop command received. Waiting for clients to complete.\n";
   //wait for all clients to complete
   while ((int)clients.size() > 0) {
     for (int i = 0; i < (int)clients.size(); i++) {
@@ -105,6 +123,7 @@ void * ListenForClose(void *) {
     }
   }
   
+  std::cout << "Closing server.\n";
   //close the server socket
   close(server_socket);
   //end thread
@@ -113,17 +132,16 @@ void * ListenForClose(void *) {
 
 void * ManageClient(void * arg) {
   Client * client = (Client *)arg;
-  std::cout << "New client accepted: " << client->soc << "\n";
+  if (client == NULL) pthread_exit(NULL);;
 
   //get message from the client
   char buffer[buff_size];
   int rc = read(client->soc, buffer, buff_size - 1);
   if (rc < 0) {
-    std::cout << "Error reading client message: " << rc << "\n";
+    std::cout << "Client " << client->soc << ": Error reading message.\n";
   }
   else {
     //sort client into correct functions based on request
-    std::cout << "Client message: " << buffer << "\n";
     std::vector<std::string> words;
     BreakBySpaces(buffer, &words);
 
@@ -140,12 +158,15 @@ void * ManageClient(void * arg) {
       CreateTracker(client, words);
     }
     else {
+      std::cout << "Client " << client->soc << ": unrecognized command.\n";
       rc = write(client->soc, "Error: unrecognized command", 27);
-      if (rc != 0) {
-        std::cout << "Unable to reply to client\n";
+      if (rc == -1) {
+        std::cout << "Unable to reply to client.\n";
       }
     }
   }
+
+  std::cout << "Ending connection with client: " << client->soc << "\n";
   //end the client connection
   close(client->soc);
   //mark client as completed
@@ -155,10 +176,13 @@ void * ManageClient(void * arg) {
 }
 
 void ListFiles(Client * client, std::vector<std::string> &words) {
+  if (client != NULL) std::cout << "Client " << client->soc << " is requesting the tracker file list.\n";
+  else std::cout << "FakeClient is requesting the tracker file list.\n";
+
   DIR *dp;
   dp = opendir(folder.c_str());
   if (dp == NULL) {
-    std::cout << "Unable to open tracker folder\n";
+    std::cout << "Unable to open tracker folder.\n";
     return;
   }
     
@@ -204,11 +228,14 @@ void ListFiles(Client * client, std::vector<std::string> &words) {
 
 void GetFile(Client * client, std::vector<std::string> &words) {
   if ((int)words.size() < 2) {
-    std::cout << "No filename detected\n";
+    std::cout << "No filename detected.\n";
     return;
   }
   std::string filename = words.at(1);
   // filename = filename.substr(0, filename.length() - 7);
+
+  if (client != NULL) std::cout << "Client " << client->soc << " is requesting tracker file for " << filename << "\n";
+  else std::cout << "FakeClient is requesting tracker file for " << filename << "\n";
 
   std::vector<std::string> lines;
   ReadFileIntoLines(folder + "/" + filename, &lines);
@@ -233,10 +260,14 @@ void UpdateTracker(Client * client, std::vector<std::string> &words) {
   std::string succ_msg = "updatetracker succ\n";
   if ((int)words.size() < 6) {
     if(client != NULL) write(client->soc, fail_msg.c_str(), fail_msg.length());
-    else std::cout << "Too few arguments to UpdateTracker()\n";
+    else std::cout << "Too few arguments to UpdateTracker().\n";
   }
 
   std::string filename = words.at(1);
+
+  if (client != NULL) std::cout << "Client " << client->soc << " is updating tracker file for " << filename << "\n";
+  else std::cout << "FakeClient is updating tracker file for " << filename << "\n";
+
   std::string start = words.at(2);
   std::string end = words.at(3);
   std::string addr = words.at(4);
@@ -258,7 +289,7 @@ void UpdateTracker(Client * client, std::vector<std::string> &words) {
 
   if ((int)lines.size() == 0) {
     if (client != NULL) write(client->soc, err_msg.c_str(), err_msg.length());
-    else std::cout << filepath << ": does not exist\n";
+    else std::cout << filepath << ": does not exist.\n";
     return;
   }
 
@@ -298,7 +329,7 @@ void UpdateTracker(Client * client, std::vector<std::string> &words) {
   }
   else {
     if (client != NULL) write(client->soc, fail_msg.c_str(), fail_msg.length());
-    else std::cout << filepath << ": cannot open to write\n";
+    else std::cout << filepath << ": cannot open to write.\n";
     return;
   }
 
@@ -311,10 +342,14 @@ void CreateTracker(Client * client, std::vector<std::string> &words) {
   std::string succ_msg = "createtracker succ\n";
   if ((int)words.size() < 6) {
     if(client != NULL) write(client->soc, fail_msg.c_str(), fail_msg.length());
-    else std::cout << "Too few arguments to CreateTracker()\n";
+    else std::cout << "Too few arguments to CreateTracker().\n";
   }
 
   std::string filename = words.at(1);
+
+  if (client != NULL) std::cout << "Client " << client->soc << " is creating tracker file for " << filename << "\n";
+  else std::cout << "FakeClient is creating tracker file for " << filename << "\n";
+
   std::string filesize = words.at(2);
   std::string md5 = words.at(3);
   std::string addr = words.at(4);
@@ -343,7 +378,7 @@ void CreateTracker(Client * client, std::vector<std::string> &words) {
   std::string filepath = folder + "/" + filename;
   if (std::ifstream(filepath)) {
     if (client != NULL) write(client->soc, err_msg.c_str(), err_msg.length());
-    else std::cout << filepath << " already exists\n";
+    else std::cout << filepath << " already exists.\n";
     return;
   }
   else {
@@ -359,7 +394,7 @@ void CreateTracker(Client * client, std::vector<std::string> &words) {
     }
     else {
       if (client != NULL) write(client->soc, fail_msg.c_str(), fail_msg.length());
-      else std::cout << filepath << ": cannot open to write\n";
+      else std::cout << filepath << ": cannot open to write.\n";
       return;
     }
   }

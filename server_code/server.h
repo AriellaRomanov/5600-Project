@@ -17,7 +17,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <thread>
-#include <map>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -25,13 +24,13 @@
 #include <vector>
 #include <tuple>
 #include <cstdlib>
-//#include "socket_api.h"
 
 #ifndef SOCKET_ERROR
 #define SOCKET_ERROR -1
 #endif
 
 #define USE_TCP 1
+#define FAKE_CLIENT 0
 
 struct Client {
     bool completed = false;
@@ -39,7 +38,6 @@ struct Client {
     sockaddr_in addr;
     socklen_t length;
     int soc = SOCKET_ERROR;
-    std::map< std::string, std::vector<int> > file_map;
 };
 
 static const int buff_size = 1024;
