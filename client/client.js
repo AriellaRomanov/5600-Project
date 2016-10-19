@@ -21,6 +21,7 @@ sock.connect(4321, "rc" + server + "xcs213.managed.mst.edu", function() {
           console.log(msg)
           break;
         case "GET":
+          if(!fs.existsSync()) fs.mkdirSync('./files')
           fs.writeFileSync('./files/' + filename,  data.slice(14, data.length - 14).toString("utf8"))
           console.log("Saved file")
           break;
