@@ -9,9 +9,9 @@ var rl = readline.createInterface({
 
 var sock = new net.Socket()
 var currentAction, filename
+var server = process.env['SERVER']
 
-
-sock.connect(4321, "rc13xcs213.managed.mst.edu", function() {
+sock.connect(4321, "rc" + server + "xcs213.managed.mst.edu", function() {
     console.log("New socket")
 
     sock.on('data', function(data){
