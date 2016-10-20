@@ -21,8 +21,8 @@ sock.connect(4321, "rc" + server + "xcs213.managed.mst.edu", function() {
           console.log(msg)
           break;
         case "GET":
-          if(!fs.existsSync()) fs.mkdirSync('./files')
-          fs.writeFileSync('./files/' + filename,  data.slice(14, data.length - 14).toString("utf8"))
+          // if(!fs.existsSync()) fs.mkdirSync('./files')
+          fs.writeFileSync('./files/' + filename,  data.slice(14, data.length - 17 - filename.length).toString("utf8"))
           console.log("Saved file")
           break;
         case "update":
@@ -38,23 +38,23 @@ sock.connect(4321, "rc" + server + "xcs213.managed.mst.edu", function() {
 
 function requestList() {
   currentAction = "REQ"
-  sock.write("REQ LIST")
+  sock.write("REQ LIST\n")
 }
 
 function getFile(file) {
   filename = file
   currentAction = "GET"
-  sock.write("GET " + file)
+  sock.write("GET " + file + ".track\n")
 }
 
 function updateTracker(data) {
   currentAction = "update"
-  sock.write("updatetracker " + data)
+  sock.write("updatetracker " + data + "\n")
 }
 
 function createTracker(data) {
   currentAction = "create"
-  sock.write("createtracker " + data)
+  sock.write("createtracker " + data+ "\n")
 }
 
 rl.question(" 1) REQ LIST\n 2) GET FILE\n 3) UPDATE TRACKER\n 4) CREATE TRACKER\n", function(choice) {
@@ -67,9 +67,9 @@ rl.question(" 1) REQ LIST\n 2) GET FILE\n 3) UPDATE TRACKER\n 4) CREATE TRACKER\
       rl.question("Type filename: ", function(file) { getFile(file); rl.close() })
       break;
     case 3:
-      rl.question("Type info: ", function(data){ updateTracker(updateTracker(data)); rl.close() })
+      rl.question("filename start_byte end_byte ip port: ", function(data){ updateTracker(updateTracker(data)); rl.close() })
     case 4:
-      rl.question("Type info: ", function(data){ createTracker(createTracker(data)); rl.close() })
+      rl.question("filename filesize desc checksum ip port: ", function(data){ createTracker(createTracker(data)); rl.close() })
       break;
     default:
       console.log("Goodbye")
