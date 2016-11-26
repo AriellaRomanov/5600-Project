@@ -1,18 +1,24 @@
 module.exports = {
 
   parseTracker: function(text) {
-    //example of parsed tracker file
-    return {
-      filename: 'name',
-      filesize: 123,
-      description: 'text',
-      md5: '123',
-      peers: [
-        { ip:'123', port: 1, start: 0, end: 10, timestamp: '...'},
-        { ip:'123', port: 1, start: 0, end: 10, timestamp: '...'},
-        { ip:'123', port: 1, start: 0, end: 10, timestamp: '...'},
-      ]
+    var strings = text.split('\n')
+    var tracker = {}
+    for(var i = 0; i < 4; i++){
+      var segments = strings[i].split(':')
+      tracker[segments[0]] = segments[1]
     }
+    tracker["peers"] = []
+    var peer = {}
+    for(var i = 0; i+4 < strings.length; i++){
+      line = strings[i+4].split(':')
+      peer["ip"] = line[0]
+      peer["port"] = line[1]
+      peer["start"] = line[2]
+      peer["end"] = line[3]
+      peer["timestamp"] = line[4]
+      tracker.peers[i] = peer
+    }
+    return tracker
   },
 
   splitToSegments: function(tracker) {
