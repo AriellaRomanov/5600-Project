@@ -1,78 +1,52 @@
 var path = require('path')
 var fs = require('fs')
 var net = require('net')
-var readline = require('readline')
-var rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
 
-var sock = new net.Socket()
-var currentAction, filename
-var server = process.env['SERVER']
+module.exports = {
 
-sock.connect(4321, "rc" + server + "xcs213.managed.mst.edu", function() {
+  socket: new net.Socket(),
 
-    sock.on('data', function(data){
-      var msg = data.toString("utf8")
+  connect: function(port, ip, cb) {
+    this.socket.connect(port, ip, cb)
 
-      switch(currentAction){
-        case "REQ":
-          console.log(msg)
-          break;
-        case "GET":
-          // if(!fs.existsSync()) fs.mkdirSync('./files')
-          fs.writeFileSync('./files/' + filename,  data.slice(14, data.length - 17 - filename.length).toString("utf8"))
-          console.log("Saved file")
-          break;
-        case "update":
-          console.log("Updated")
-          break;
-        case "create":
-          console.log("Created")
-          break;
-      }
+    this.socket.on('end', function() { console.log('Tracker socket closing')})
+  },
+
+  requestList: function() {
+
+    this.socket.once('data', function(data){
+      console.log(data.toString())
+      //parse message
     })
 
-})
+    this.socket.write("REQ LIST\n")
+  },
 
-function requestList() {
-  currentAction = "REQ"
-  sock.write("REQ LIST\n")
-}
+  getFile: function(file) {
 
-function getFile(file) {
-  filename = file
-  currentAction = "GET"
-  sock.write("GET " + file + ".track\n")
-}
+    this.socket.once('data', function(data){
+      fs.writeFileSync('./files/' + file,  data.slice(14, data.length - 17 - file.length).toString("utf8"))
+    })
 
-function updateTracker(data) {
-  currentAction = "update"
-  sock.write("updatetracker " + data + "\n")
-}
+    this.socket.write("GET " + file + ".track\n")
+  },
 
-function createTracker(data) {
-  currentAction = "create"
-  sock.write("createtracker " + data+ "\n")
-}
+  updateTracker: function(update) {
 
-rl.question(" 1) REQ LIST\n 2) GET FILE\n 3) UPDATE TRACKER\n 4) CREATE TRACKER\n", function(choice) {
-  switch(Number(choice)){
-    case 1:
-      requestList()
-      rl.close()
-      break;
-    case 2:
-      rl.question("Type filename: ", function(file) { getFile(file); rl.close() })
-      break;
-    case 3:
-      rl.question("filename start_byte end_byte ip port: ", function(data){ updateTracker(updateTracker(data)); rl.close() })
-    case 4:
-      rl.question("filename filesize desc checksum ip port: ", function(data){ createTracker(createTracker(data)); rl.close() })
-      break;
-    default:
-      console.log("Goodbye")
-      rl.close()
+    this.socket.once('data', function(data) {
+      console.log("Updated")
+    })
+
+    this.socket.write("updatetracker " + update + "\n")
+  },
+
+  createTracker: function(tracker) {
+
+    this.socket.once('data', function(data) {
+      console.log("created")
+    })
+
+    this.socket.write("createtracker " + tracker+ "\n")
   }
-})
+
+}
