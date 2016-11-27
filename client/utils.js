@@ -2,21 +2,31 @@ module.exports = {
 
   parseTracker: function(text) {
     var strings = text.split('\n')
+    //remove all comments
+    strings = strings.filter(function(line) {
+      return line[0] !== '#'
+    })
+
     var tracker = {}
-    for(var i = 0; i < 4; i++){
-      var segments = strings[i].split(':')
+    var currentLine = strings.shift()
+
+    while(isNaN(currentLine[0])) {
+      var segments = currentLine.split(': ')
       tracker[segments[0]] = segments[1]
+      currentLine = strings.shift()
     }
+
     tracker["peers"] = []
     var peer = {}
-    for(var i = 0; i+4 < strings.length; i++){
-      line = strings[i+4].split(':')
+    while(currentLine){
+      var line = currentLine.split(':')
       peer["ip"] = line[0]
       peer["port"] = line[1]
       peer["start"] = line[2]
       peer["end"] = line[3]
       peer["timestamp"] = line[4]
-      tracker.peers[i] = peer
+      tracker.peers.push(peer)
+      currentLine = strings.shift()
     }
     return tracker
   },
