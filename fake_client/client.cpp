@@ -94,8 +94,7 @@ int main() {
           std::cout << "Input filesize: ";
           std::cin >> input;
           message.append(input + " ");
-          std::cout << "Input description: ";
-          std::cin >> input;
+          input = "A multiword description";
           message.append(input + " ");
           std::cout << "Input md5: ";
           std::cin >> input;

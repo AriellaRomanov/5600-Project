@@ -223,7 +223,7 @@ void ListFiles(Client * client, std::vector<std::string> &words) {
   }
   reply.append("REP LIST END\n");
   if (client != NULL) write(client->soc, reply.c_str(), reply.length());
-  else std::cout << "\n" << reply << "\n";
+  std::cout << "\n" << reply << "\n";
 }
 
 void GetFile(Client * client, std::vector<std::string> &words) {
@@ -232,7 +232,7 @@ void GetFile(Client * client, std::vector<std::string> &words) {
     return;
   }
   std::string filename = words.at(1);
-  // filename = filename.substr(0, filename.length() - 7);
+  filename = filename.substr(0, filename.length() - 7);
 
   if (client != NULL) std::cout << "Client " << client->soc << " is requesting tracker file for " << filename << "\n";
   else std::cout << "FakeClient is requesting tracker file for " << filename << "\n";
@@ -241,7 +241,7 @@ void GetFile(Client * client, std::vector<std::string> &words) {
   ReadFileIntoLines(folder + "/" + filename, &lines);
   std::string md5 = "";
   if ((int)lines.size() > 4) md5 = lines.at(3).substr(5);
-
+  //intelligently get md5
 
   cout << filename << endl;
   std::string reply = "REP GET BEGIN\n";
@@ -251,7 +251,7 @@ void GetFile(Client * client, std::vector<std::string> &words) {
   reply.append("REP GET END " + md5 + "\n");
 
   if (client != NULL) write(client->soc, reply.c_str(), reply.length());
-  else std::cout << "\n" << reply << "\n";
+  std::cout << "\n" << reply << "\n";
 }
 
 void UpdateTracker(Client * client, std::vector<std::string> &words) {
@@ -260,7 +260,7 @@ void UpdateTracker(Client * client, std::vector<std::string> &words) {
   std::string succ_msg = "updatetracker succ\n";
   if ((int)words.size() < 6) {
     if(client != NULL) write(client->soc, fail_msg.c_str(), fail_msg.length());
-    else std::cout << "Too few arguments to UpdateTracker().\n";
+    std::cout << "Too few arguments to UpdateTracker().\n";
   }
 
   std::string filename = words.at(1);
@@ -289,7 +289,7 @@ void UpdateTracker(Client * client, std::vector<std::string> &words) {
 
   if ((int)lines.size() == 0) {
     if (client != NULL) write(client->soc, err_msg.c_str(), err_msg.length());
-    else std::cout << filepath << ": does not exist.\n";
+    std::cout << filepath << ": does not exist.\n";
     return;
   }
 
@@ -329,7 +329,7 @@ void UpdateTracker(Client * client, std::vector<std::string> &words) {
   }
   else {
     if (client != NULL) write(client->soc, fail_msg.c_str(), fail_msg.length());
-    else std::cout << filepath << ": cannot open to write.\n";
+    std::cout << filepath << ": cannot open to write.\n";
     return;
   }
 
@@ -342,7 +342,7 @@ void CreateTracker(Client * client, std::vector<std::string> &words) {
   std::string succ_msg = "createtracker succ\n";
   if ((int)words.size() < 6) {
     if(client != NULL) write(client->soc, fail_msg.c_str(), fail_msg.length());
-    else std::cout << "Too few arguments to CreateTracker().\n";
+    std::cout << "Too few arguments to CreateTracker().\n";
   }
 
   std::string filename = words.at(1);
@@ -351,17 +351,18 @@ void CreateTracker(Client * client, std::vector<std::string> &words) {
   else std::cout << "FakeClient is creating tracker file for " << filename << "\n";
 
   std::string filesize = words.at(2);
-  std::string md5 = words.at(3);
-  std::string addr = words.at(4);
-  std::string port = words.at(5);
+
+  int index = words.size() - 1;
+  std::string port = words.at(index--);
+  std::string addr = words.at(index--);
+  std::string md5 = words.at(index--);
+
   std::string desc = "";
-  if((int)words.size() == 7) {
-    desc = words.at(3);
-    md5 = words.at(4);
-    addr = words.at(5);
-    port = words.at(6);
+  for (int i = 3; i <= index; i++) {
+    desc.append(words.at(i) + " ");
   }
-  int index = port.find("\n");
+
+  index = port.find("\n");
   if (index != std::string::npos) port = port.substr(0, port.length() - 1);
   
   std::vector<std::string> lines;
@@ -378,7 +379,7 @@ void CreateTracker(Client * client, std::vector<std::string> &words) {
   std::string filepath = folder + "/" + filename;
   if (std::ifstream(filepath)) {
     if (client != NULL) write(client->soc, err_msg.c_str(), err_msg.length());
-    else std::cout << filepath << " already exists.\n";
+    std::cout << filepath << " already exists.\n";
     return;
   }
   else {
@@ -390,11 +391,11 @@ void CreateTracker(Client * client, std::vector<std::string> &words) {
       }
       fstr.close();
       if (client != NULL) write(client->soc, succ_msg.c_str(), succ_msg.length());
-      else std::cout << "Created file: " << filepath << "\n";
+      std::cout << "Created file: " << filepath << "\n";
     }
     else {
       if (client != NULL) write(client->soc, fail_msg.c_str(), fail_msg.length());
-      else std::cout << filepath << ": cannot open to write.\n";
+      std::cout << filepath << ": cannot open to write.\n";
       return;
     }
   }
@@ -414,6 +415,28 @@ void ReadFileIntoLines(std::string path, std::vector<std::string> * lines) {
   fstr.close();
   return;
 }
+
+/*
+void ReadFileIntoLines(std::string path, std::vector<std::string> * lines) {
+  int fd = open(path, O_RDONLY);
+  if (fd < 0) return;
+  struct stat stat_buff;
+  if (fstat(fd, &stat_buff) < 0) return;
+  long size = stat_buff.st_size;
+  unsigned char * md5_buff;
+  char * file = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
+  MD5((unsigned char *)file, size, md5_buff);
+  munmap(file, size);
+  std::string md5 = "";
+  for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
+    char _buff[10];
+    sprintf(_buff, "%02x", md5_buff[i]);
+    md5.append(std::string(_buff));
+  }
+  lines->push_back(md5);
+  close(fd);
+}
+*/
 
 void BreakBySpaces(char * buffer, std::vector<std::string> * words) {
   int index = 0;
