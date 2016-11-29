@@ -13,7 +13,7 @@ module.exports = {
   },
 
   requestList: function() {
-
+    
     this.socket.once('data', function(data){
       console.log(data.toString())
       //parse message

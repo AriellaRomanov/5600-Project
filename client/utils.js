@@ -12,33 +12,76 @@ module.exports = {
 
     while(isNaN(currentLine[0])) {
       var segments = currentLine.split(': ')
-      tracker[segments[0]] = segments[1]
+      tracker[segments[0].toLowerCase()] = segments[1]
       currentLine = strings.shift()
     }
 
     tracker["peers"] = []
-    var peer = {}
+
     while(currentLine){
       var line = currentLine.split(':')
-      peer["ip"] = line[0]
-      peer["port"] = line[1]
-      peer["start"] = line[2]
-      peer["end"] = line[3]
-      peer["timestamp"] = line[4]
-      tracker.peers.push(peer)
+
+      tracker.peers.push({
+        ip: line[0],
+        port: Number(line[1]),
+        start: Number(line[2]),
+        end: Number(line[3]),
+        timestamp: line[4]
+      })
+
       currentLine = strings.shift()
     }
+
     return tracker
+  },
+
+  parseList: function(text) {
+    var lines = text.split('\n')    
+    var trackerList = []
+    for (var i = lines.length - 1; i >= 0; i--) {
+      var line = lines[i].split(' ')
+      trackerList.push({
+        name: line[1],
+        size: line[2],
+        md5: line[3]
+      })
+    }
+
+    return trackerList
   },
 
   splitToSegments: function(tracker) {
     var numSegments = 10
-    var segmentSize = Math.floor(tracker.filesize/numSegments)
+    var segmentSize = Math.ceil(tracker.filesize/numSegments)
+    var segmentsCreated = 0
+    var currentPeerIndex = 0
+    var segmentStart = segmentsCreated * segmentSize
+    var segmentEnd = (segmentStart + segmentSize) - 1
+    var peers = tracker.peers
     tracker.segments = []
 
-    for(var i = 0; i < numSegments; i++) {
-      tracker.segments.push({ ip:'123', port: 1, start: 0, end: 10, timestamp: '...'})
+    while(segmentsCreated < numSegments) {
+      var selectedPeer = peers[currentPeerIndex]
+
+      //make sure peer has segment before adding them
+      if((selectedPeer.start <= segmentStart) && 
+         (selectedPeer.end >= segmentEnd)) {
+
+        tracker.segments.push({ ip: selectedPeer.ip,
+                                port: selectedPeer.port,
+                                start: segmentStart,
+                                end: segmentEnd })
+
+        segmentStart = (segmentsCreated*segmentSize)+1
+        segmentEnd = Math.min(segmentStart+segmentSize-1, tracker.filesize-1)
+        segmentsCreated += 1
+      }
+
+      currentPeerIndex = (currentPeerIndex+1)%peers.length
+
     }
+
+
 
   },
 
