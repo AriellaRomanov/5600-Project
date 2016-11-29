@@ -1,19 +1,21 @@
 var path = require('path')
 var fs = require('fs')
 var net = require('net')
+var config = require('./sconfig.json')
+
+var port = config.trackerPort
+var ip = config.trackerUrl
 
 module.exports = {
 
-  socket: new net.Socket(),
+  connect: function() {
+    this.socket.connect(port, ip)
 
-  connect: function(port, ip, cb) {
-    this.socket.connect(port, ip, cb)
-
-    this.socket.on('end', function() { console.log('Tracker socket closing')})
+    this.socket.on('end', this.socket.end)
   },
 
   requestList: function() {
-    
+    this.connect()    
     this.socket.once('data', function(data){
       console.log(data.toString())
       //parse message
@@ -22,17 +24,18 @@ module.exports = {
     this.socket.write("REQ LIST\n")
   },
 
-  getFile: function(file) {
-
+  getTracker: function(file) {
+    this.connect()
     this.socket.once('data', function(data){
-      fs.writeFileSync('./files/' + file,  data.slice(14, data.length - 17 - file.length).toString("utf8"))
+      var tracker = data.slice(14, data.length - 17 - file.length).toString()
+      console.log(tracker)
     })
 
     this.socket.write("GET " + file + ".track\n")
   },
 
   updateTracker: function(update) {
-
+    this.connect()
     this.socket.once('data', function(data) {
       console.log("Updated")
     })
@@ -41,7 +44,7 @@ module.exports = {
   },
 
   createTracker: function(tracker) {
-
+    this.connect()
     this.socket.once('data', function(data) {
       console.log("created")
     })
