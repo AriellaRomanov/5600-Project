@@ -1,7 +1,7 @@
 module.exports = {
 
-  parseTracker: function(text) {
-    var strings = text.split('\n')
+  parseTracker: function(strings) {
+
     //remove all comments
     strings = strings.filter(function(line) {
       return line[0] !== '#'
@@ -35,8 +35,7 @@ module.exports = {
     return tracker
   },
 
-  parseList: function(text) {
-    var lines = text.split('\n')    
+  parseList: function(lines) {
     var trackerList = []
     for (var i = lines.length - 1; i >= 0; i--) {
       var line = lines[i].split(' ')
