@@ -309,6 +309,15 @@ void UpdateTracker(Client * client, std::vector<std::string> &words) {
             lines.at(i) = new_line;
             edited = true;
           }
+          else {
+            //check if we need to remove this client from the list
+            index = line.rfind(":");
+            if (index != std::string::npos) {
+              clock_t past = (clock_t)(stoi(line.substr(index + 1)));
+              double elapsed = ((clock() - past) / (double)CLOCKS_PER_SEC) * 1000;
+              if (elapsed > 15000) lines.erase(lines.begin() + i);
+            }
+          }
         }
       }
     }
@@ -403,16 +412,33 @@ void CreateTracker(Client * client, std::vector<std::string> &words) {
 }
 
 void ReadFileIntoLines(std::string path, std::vector<std::string> * lines) {
+
+  char * file;
+  int offset = 0;
+//  strcpy(file, "");
+
   fstream fstr;
   fstr.open(path.c_str());
   if (fstr.is_open()) {
     std::string test = "";
     while(std::getline(fstr, test)) {
       lines->push_back(test);
+test = "";
+//      strcat(file, test.c_str());
+      offset += test.length();
+
       test = "";
     }
   }
   fstr.close();
+
+  unsigned char * hash;
+  hash = MD5((const unsigned char *)file, offset, NULL);
+  std::cout << "Offset: " << offset << std::endl;
+  for(int i = 0; i < offset; i++) {
+    printf("%02x", hash[i]);
+  }
+
   return;
 }
 
