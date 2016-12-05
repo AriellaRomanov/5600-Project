@@ -1,3 +1,5 @@
+var config = require('./sconfig.json')
+
 module.exports = {
 
   parseTracker: function(strings) {
@@ -20,14 +22,16 @@ module.exports = {
 
     while(currentLine){
       var line = currentLine.split(':')
-
-      tracker.peers.push({
+      var peer = {
         ip: line[0],
         port: Number(line[1]),
         start: Number(line[2]),
         end: Number(line[3]),
-        timestamp: line[4]
-      })
+        timestamp: Number(line[4])
+      }
+      peer.size = peer.end - peer.start + 1
+      peer.numSegments = Math.ceil(peer.size/config.segmentSize)
+      tracker.peers.push(peer)
 
       currentLine = strings.shift()
     }
@@ -50,50 +54,80 @@ module.exports = {
   },
 
   splitToSegments: function(tracker) {
-    var numSegments = 10
-    var segmentSize = Math.ceil(tracker.filesize/numSegments)
-    var segmentsCreated = 0
+    var segmentSize = config.segmentSize
     var currentPeerIndex = 0
-    var segmentStart = segmentsCreated * segmentSize
-    var segmentEnd = (segmentStart + segmentSize) - 1
+    var segmentStart = 0
+    var segmentEnd = Math.min(segmentStart+segmentSize-1, tracker.filesize - 1)
     var peers = tracker.peers
+
+    var segments = []
     tracker.segments = []
 
-    while(segmentsCreated < numSegments) {
-      var selectedPeer = peers[currentPeerIndex]
+    peers.forEach(function(peer){
+      var gaps = []
+      if(segments.length > 0) {
+        var startByte = -1
+  
+        segments.forEach(function(segment){
+          var gapSize = segment.start - startByte - 1
+          if(gapSize > 0) {
+            gaps.push({
+              start: startByte + 1,
+              end: segment.end - 1,
+              size: gapSize
+            })
 
-      //make sure peer has segment before adding them
-      if((selectedPeer.start <= segmentStart) && 
-         (selectedPeer.end >= segmentEnd)) {
+            startByte = segmend.end
+          }
 
-        tracker.segments.push({ ip: selectedPeer.ip,
-                                port: selectedPeer.port,
-                                start: segmentStart,
-                                end: segmentEnd })
+          var remainingSize = tracker.filesize - startByte - 2
+          if(remainingSize >  0) {
+            gaps.push({
+              start: startByte + 1,
+              end: tracker.filesize - 1,
+              size: remainingSize
+            })
+          }
 
-        segmentStart = (segmentsCreated*segmentSize)+1
-        segmentEnd = Math.min(segmentStart+segmentSize-1, tracker.filesize-1)
-        segmentsCreated += 1
+        })
+      } else {
+        gaps.push({
+          start: 0,
+          end: tracker.filesize - 1,
+          size: tracker.filesize
+        })
       }
 
-      currentPeerIndex = (currentPeerIndex+1)%peers.length
+      gaps.forEach(function(gap){
+        var start = Math.max(peer.start, gap.start)
+        var end = Math.min(peer.end, gap.end)
+        if((peer.start <= start) &&
+           (peer.end >= end)) {
+          segments.push({
+            start: start,
+            end: end,
+            size: end - start + 1,
+            url: peer.ip,
+            port: peer.port
+          })
+        }
+      })
+    })
 
-    }
+    segments.forEach(function(segment){
+      var numSegments = Math.ceil(segment.size/config.segmentSize)
+      for (var i = 0; i < numSegments; i++) {
+        var start = segment.start + segmentSize * i
+        var end = Math.min(start + segmentSize - 1, segment.end)
+        tracker.segments.push({
+          start: start,
+          end: end,
+          url: segment.url,
+          port: segment.port
+        })
+      };
+    })
 
-
-
-  },
-
-  selectPeers: function(tracker) {
-
-    var selectedPeers = []
-    for (var i = tracker.peers.length - 1; i >= 0; i--) {
-      var peer = tracker.peers[i]
-      var selectThisPeer = true
-      //make sure segment isnt already selected and any other conditions needed
-      if(selectThisPeer) selectedPeers.push(peer)
-    }
-    
-    return selectedPeers
   }
+
 }
