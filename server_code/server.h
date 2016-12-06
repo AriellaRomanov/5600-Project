@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <openssl/md5.h>
-#include <ctime>
+#include <time.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>

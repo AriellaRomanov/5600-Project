@@ -275,8 +275,9 @@ void UpdateTracker(Client * client, std::vector<std::string> &words) {
   int index = port.find("\n");
   if (index != std::string::npos) port = port.substr(0, port.length() - 1);
 
+  time_t nw = time(0);
   char buff[buff_size];
-  sprintf(buff, "%s:%s:%s:%s:%i", addr.c_str(), port.c_str(), start.c_str(), end.c_str(), (int)clock());
+  sprintf(buff, "%s:%s:%s:%s:%i", addr.c_str(), port.c_str(), start.c_str(), end.c_str(), (int)nw);
   std::string new_line(buff);
 
   fail_msg = "updatetracker " + filename + " fail\n";
@@ -313,8 +314,8 @@ void UpdateTracker(Client * client, std::vector<std::string> &words) {
             //check if we need to remove this client from the list
             index = line.rfind(":");
             if (index != std::string::npos) {
-              clock_t past = (clock_t)(stoi(line.substr(index + 1)));
-              double elapsed = ((clock() - past) / (double)CLOCKS_PER_SEC) * 1000;
+              int past = stoi(line.substr(index + 1));
+              double elapsed = (int)nw - past;
               if (elapsed > 15000) lines.erase(lines.begin() + i);
             }
           }
@@ -333,7 +334,7 @@ void UpdateTracker(Client * client, std::vector<std::string> &words) {
     }
     fstr.close();
     if (client != NULL) write(client->soc, succ_msg.c_str(), succ_msg.length());
-    else std::cout << "Edited file: " << filepath << "\n";
+    else std::cout << "Updated Tracker: " << filepath << "\n";
     return;
   }
   else {
@@ -382,7 +383,7 @@ void CreateTracker(Client * client, std::vector<std::string> &words) {
   lines.push_back("#list of peers follows next\n");
   
   char buff[buff_size];
-  sprintf(buff, "%s:%s:0:%s:%i\n", addr.c_str(), port.c_str(), filesize.c_str(), (int)clock());
+  sprintf(buff, "%s:%s:0:%s:%i\n", addr.c_str(), port.c_str(), filesize.c_str(), (int)time(0));
   lines.push_back(std::string(buff));
 
   std::string filepath = folder + "/" + filename;
@@ -413,56 +414,19 @@ void CreateTracker(Client * client, std::vector<std::string> &words) {
 
 void ReadFileIntoLines(std::string path, std::vector<std::string> * lines) {
 
-  char * file;
-  int offset = 0;
-//  strcpy(file, "");
-
   fstream fstr;
   fstr.open(path.c_str());
   if (fstr.is_open()) {
     std::string test = "";
     while(std::getline(fstr, test)) {
       lines->push_back(test);
-test = "";
-//      strcat(file, test.c_str());
-      offset += test.length();
-
       test = "";
     }
   }
   fstr.close();
 
-  unsigned char * hash;
-  hash = MD5((const unsigned char *)file, offset, NULL);
-  std::cout << "Offset: " << offset << std::endl;
-  for(int i = 0; i < offset; i++) {
-    printf("%02x", hash[i]);
-  }
-
   return;
 }
-
-/*
-void ReadFileIntoLines(std::string path, std::vector<std::string> * lines) {
-  int fd = open(path, O_RDONLY);
-  if (fd < 0) return;
-  struct stat stat_buff;
-  if (fstat(fd, &stat_buff) < 0) return;
-  long size = stat_buff.st_size;
-  unsigned char * md5_buff;
-  char * file = mmap(0, size, PROT_READ, MAP_SHARED, fd, 0);
-  MD5((unsigned char *)file, size, md5_buff);
-  munmap(file, size);
-  std::string md5 = "";
-  for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {
-    char _buff[10];
-    sprintf(_buff, "%02x", md5_buff[i]);
-    md5.append(std::string(_buff));
-  }
-  lines->push_back(md5);
-  close(fd);
-}
-*/
 
 void BreakBySpaces(char * buffer, std::vector<std::string> * words) {
   int index = 0;
