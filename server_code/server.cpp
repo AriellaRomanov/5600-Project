@@ -24,7 +24,7 @@ int main() {
       return 0;
     }
   }
-
+/*
   if (FAKE_CLIENT) {
     std::cout << "\nRunning FakeClient through functions.\n";
     std::vector<std::string> words0;
@@ -41,7 +41,7 @@ int main() {
     UpdateTracker(NULL, words3);
     std::cout << "FakeClient completed.\n\n";
   }
-
+*/
   //create TCP server socket
   std::cout << "Creating socket for server.\n";
   server_socket = socket(AF_INET, SOCK_STREAM, 0);
