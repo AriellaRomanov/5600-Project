@@ -42,6 +42,7 @@ module.exports = {
       var lines = text.split('\n')
       lines = text.split('\n').slice(1, lines.length - 2)
       var tracker = utils.parseTracker(lines)
+      utils.splitToSegments(tracker)
       cb(tracker)
     })
 

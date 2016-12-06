@@ -3,21 +3,15 @@ var config = require('./sconfig.json')
 module.exports = {
 
   parseTracker: function(strings) {
-
-    //remove all comments
-    strings = strings.filter(function(line) {
-      return line[0] !== '#'
-    })
-
     var tracker = {}
     var currentLine = strings.shift()
 
-    while(isNaN(currentLine[0])) {
+    while(currentLine[0] !== '#') {
       var segments = currentLine.split(': ')
       tracker[segments[0].toLowerCase()] = segments[1]
       currentLine = strings.shift()
     }
-
+    currentLine = strings.shift()
     tracker["peers"] = []
 
     while(currentLine){

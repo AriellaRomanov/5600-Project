@@ -1,0 +1,9 @@
+Filename: fake.txt
+Filesize: fake bytes
+Description: something to say about fake.txt
+MD5: checksum_fake.txt
+#list of peers
+address123:1234:3:7:487499910
+1234567890:0:1:9:413887826
+1234567856:0:1:9:499624398
+REP G

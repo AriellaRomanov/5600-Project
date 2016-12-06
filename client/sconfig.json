@@ -1,5 +1,17 @@
 {
   "trackerUrl": "rc07xcs213.managed.mst.edu",
   "trackerPort": 4321,
-  "segmentSize": 1024
+  "segmentSize": 1024,
+  "maxOpenSockets": 100,
+  "peerIp": "rc13xcs213.managed.mst.edu",
+  "Peer1Port": 5001,
+  "Peer2Port": 5002,
+  "Peer3Port": 5003,
+  "Peer4Port": 5004,
+  "Peer5Port": 5005,
+  "Peer6Port": 5006,
+  "Peer7Port": 5007,
+  "Peer8Port": 5008,
+  "Peer9Port": 5009,
+  "Peer10Port": 5010
 }
