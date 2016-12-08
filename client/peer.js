@@ -2,24 +2,60 @@ var Socket = require('net').Socket
 var crypto = require('crypto')
 var config = require('./sconfig.json')
 var tracker = require('./tracker')
+var utils = require('./utils')
 var fs = require('fs')
+var path = require('path')
 
 var numPeers = 0
-
+var socketsOpen = 0
+setInterval(function(){
+  console.log(socketsOpen, 'peer sockets open')
+}, 30000)
 module.exports = function(){
   return {
     name: 'Peer' + ++numPeers,
 
+    fileLocation: function(filename) {
+      return path.join('./', this.name, filename)
+    },
+
+    hasFile: function(filename) {
+      return fs.existsSync(this.fileLocation(filename))
+    },
+
     getFile: function(tracker, cb){
-      var segments = tracker.segments
+      var peer = this
       //keep track of how many segments are completed
-      tracker.completedSegments = 0
+      var gaps = [{
+        start: 0,
+        end: tracker.filesize - 1
+      }]
+
+      //open socket with peer (seed for now)
+      //choose segment to grab
+      //request segment
+      //update gaps
+      //calculate largest obtained chunk
+      var socket = new Socket()
+      var peer = tracker.peers[0]
+      while(gaps.length > 0) {
+        //assuming peer is seed
+        gaps.forEach(function(gap){    
+          //randomly choose segment to grab      
+          var startByteRequested = 
+          var start = Math.peer.start
+          var end = Math.min(start + config.segmentSize, peer.end)
+        })
+      }
 
 
-      var stitchSegments = this.stitchSegments.bind(this)
+
+
       var sockets = []
       var runningSockets = 0
+
       segments.forEach(function(segment) {
+        return
         //create a socket to retrieve this segment
         segment.socket = new Socket()
         sockets.push(segment.socket)
@@ -47,7 +83,9 @@ module.exports = function(){
           segment.socket.end()
           delete segment.socket
 
+          socketsOpen--
           if(sockets.length > 0) {
+            socketsOpen++
             sockets.shift().connect(segment.port, segment.url)
           }
 
@@ -67,7 +105,7 @@ module.exports = function(){
             delete segment.chunks
             if(tracker.completedSegments === segments.length) {
               //stitch all segments together
-              stitchSegments(tracker)
+              peer.stitchSegments(tracker)
               cb()
             }
           }
@@ -78,6 +116,7 @@ module.exports = function(){
           //connect to peer that has this segment
           sockets.shift()
           runningSockets++
+          socketsOpen++
           segment.socket.connect(segment.port, segment.url)          
         }
 
@@ -121,7 +160,19 @@ module.exports = function(){
       var peer = this
       var port = config[peer.name + "Port"]
       this.server = require('./server')(peer)
-      this.server.listen(port, cb)
+
+      this.server.listen(port, function(){
+        var files = fs.readdirSync(peer.name)
+        var count = 0
+        files.forEach(function(filename){
+          peer.createTracker(filename, function(){
+            count++
+            console.log(peer.name, 'tracker created for', filename)
+            if(count === files.length) cb()
+          })
+        })
+        if(files.length === 0) cb()
+      })
     },
 
     createTracker: function(filename, cb){
@@ -144,10 +195,12 @@ module.exports = function(){
     },
 
     getList: function(cb) {
+      console.log(this.name, 'requesting tracker list')
       tracker.requestList(cb)
     },
 
     getTracker: function(name, cb) {
+      console.log(this.name, 'getting tracker for', name)
       tracker.getTracker(name, cb)
     }
   }
