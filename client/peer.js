@@ -23,110 +23,61 @@ module.exports = function(){
       return fs.existsSync(this.fileLocation(filename))
     },
 
+    //pick random segment to download from a peer
+    pickRandomSegment: function(gaps, peer) {
+      //upper bound for index
+      var upperBound = gaps.length - 1
+      var i = Math.floor(Math.random() * upperBound) + 1
+      var gap = gaps[i]
+
+      return utils.chooseRandomSegment(gap, peer)
+    },
+
     getFile: function(tracker, cb){
-      var peer = this
-      //keep track of how many segments are completed
+      var me = this
+      //keep track of gaps in file (segments we currently need)
       var gaps = [{
         start: 0,
         end: tracker.filesize - 1
       }]
 
-      //open socket with peer (seed for now)
-      //choose segment to grab
-      //request segment
-      //update gaps
-      //calculate largest obtained chunk
+      var segments = []
       var socket = new Socket()
       var peer = tracker.peers[0]
-      while(gaps.length > 0) {
-        //assuming peer is seed
-        gaps.forEach(function(gap){    
-          //randomly choose segment to grab      
-          var startByteRequested = 
-          var start = Math.peer.start
-          var end = Math.min(start + config.segmentSize, peer.end)
-        })
-      }
+      var filename = tracker.filename
+      var filesize = tracker.filesize
 
+      socket.on('connect', function(){
+        //choose random segment to request
+        var segment = utils.chooseRandomSegment(gap[0])
+        //request it
+        socket.write('GET ' + filename + ' ' + segment.start + ':' + segment.end)
+      })
 
+      socket.on('data', function(buffer){
+        var msg = buffer.toString().split(config.delimiter)
+        var segmentInfo = msg[0].split(':')
+        var start = segmentInfo[0]
+        var end = segmentInfo[1]
+        var segment = utils.createSegment(start, end)
+        segment.contents = msg[1]
+        segments.push(segment)
+        gaps = utils.recalculateGaps(gaps, segment, filesize)
 
-
-      var sockets = []
-      var runningSockets = 0
-
-      segments.forEach(function(segment) {
-        return
-        //create a socket to retrieve this segment
-        segment.socket = new Socket()
-        sockets.push(segment.socket)
-        //create array to store chunks received over tcp
-        segment.chunks = []
-
-        //what to do when socket connects
-        segment.socket.on('connect', function(){
-          var socket = segment.socket
-          //request segment
-          socket.write('GET ' + tracker.filename + ':' + segment.start + ':' + segment.end)
-          //define what to do when server responds
-          socket.on('data', function(data){
-            //add data to segment
-            segment.chunks.push(data)
-          })
-        })
-
-        //define what happens when connection closes
-        segment.socket.on('end', function(){
-          //If we have all data, build file
-          //else, get segment somewhere else
-
-          //close socket
-          segment.socket.end()
-          delete segment.socket
-
-          socketsOpen--
-          if(sockets.length > 0) {
-            socketsOpen++
-            sockets.shift().connect(segment.port, segment.url)
-          }
-
-          //combine chunks into a buffer
-          var buffer = Buffer.concat(segment.chunks)
-          //calculate length of segment
-          var segmentLength = segment.end - segment.start + 1
-          //make sure whe have as much data as expected
-          if(buffer.length === segmentLength) {
-            //store this buffer
-            segment.bufferedData = buffer
-            //increment completed segments
-            tracker.completedSegments++
-            //check if we completed all segments
-
-            //remove unneeded attributes from segment
-            delete segment.chunks
-            if(tracker.completedSegments === segments.length) {
-              //stitch all segments together
-              peer.stitchSegments(tracker)
-              cb()
-            }
-          }
-
-        })
-
-        if(runningSockets < config.maxOpenSockets){
-          //connect to peer that has this segment
-          sockets.shift()
-          runningSockets++
-          socketsOpen++
-          segment.socket.connect(segment.port, segment.url)          
+        if(gaps.length > 0) {
+          var nextSegment = me.pickRandomSegment(gaps, peer)
+          socket.write('GET ' + filename + ' ' + nextSegment.start + ':' + nextSegment.end)
+        } else {
+          socket.end()
+          me.stitchSegments(tracker, segments, cb)
         }
-
       })
 
     },
 
-    stitchSegments: function(tracker) {
+    stitchSegments: function(tracker, segments, cb) {
       //sort segments so they stitch together properly
-      var segments = tracker.segments.sort(function(a, b) {
+      var segments = segments.sort(function(a, b) {
         if(a.start < b.start) {
           return -1
         } else {
@@ -134,10 +85,7 @@ module.exports = function(){
         }
       })
 
-      //collect the raw data of each segment into array
-      var buffers = segments.map(function(segment){ return segment.bufferedData })
-      //combine all data
-      var file = Buffer.concat(buffers)
+      var file = segments.map(function(segment){ return segment.contents }).join('')
       //generate md5 of combined data
       var md5 = crypto.createHash('md5').update(file).digest('hex')
       //compare to md5 provided by tracker
@@ -148,7 +96,9 @@ module.exports = function(){
         if(!fs.existsSync(dir)) {
           fs.mkdirSync(dir)
         }
-        fs.writeFile(dir + '/' + tracker.filename, file)
+        fs.writeFile(dir + '/' + tracker.filename, file, cb)
+      } else {
+        console.log(this.name, 'md5 of', tracker.filename, 'did not match')
       }
     },
 

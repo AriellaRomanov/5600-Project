@@ -13,5 +13,6 @@
   "Peer7Port": 5007,
   "Peer8Port": 5008,
   "Peer9Port": 5009,
-  "Peer10Port": 5010
+  "Peer10Port": 5010,
+  "delimiter": "~-~-~-~-~-"
 }

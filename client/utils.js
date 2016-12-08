@@ -75,7 +75,7 @@ module.exports = {
   },
 
   //calculate new array of gaps when given segment is attained
-  recalculateGaps: function(gaps, segment) {
+  recalculateGaps: function(gaps, segment, filesize) {
     var utils = this
     var newGaps = []
     gaps.forEach(function(gap){
@@ -83,7 +83,7 @@ module.exports = {
       if(utils.segmentContains(gap, segment)) {
         //calculate the 2 new gaps created on left and right
         var newEnd = segment.start - 1
-        var newStart = segment.end + 1        
+        var newStart = Math.min(segment.end + 1, filesize-1)
         newGaps.push(utils.createSegment(gap.start, newEnd))
         newGaps.push(utils.createSegment(newStart, gap.end))
       } else {
@@ -98,8 +98,10 @@ module.exports = {
 
   //choose a random segment within provided gap that peer has
   chooseRandomSegment: function(gap, peer) {
-    //keep start in first third of gap
-    var startUpperBound = gap.start + (gap.size/3)
+    //just choose entire gap if it fits in given segment size
+    if(gap.size <= config.segmentSize) return gap
+
+    var startUpperBound = gap.start + gap.size - config.segmentSize
     var startLowerBound = gap.start
     var start = Math.floor(Math.random() * (startUpperBound - startLowerBound + 1) + startLowerBound)
 

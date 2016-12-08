@@ -1,6 +1,7 @@
 var net = require('net')
 var fs = require('fs')
 var config = require('./sconfig.json')
+var utils = require('./utils')
 
 module.exports = function(peer) {
   var server = net.createServer()
@@ -10,27 +11,31 @@ module.exports = function(peer) {
   var files = {}
 
   server.on('connection', function(socket){
-    // console.log('connection received')
 
     socket.on('data', function(buffer){
-      var command = buffer.toString('utf8', 0, 3)
-      var segmentInfo = buffer.toString('utf8', 4, buffer.length).split(':')
-      var filename = segmentInfo[0]
+      var msg = buffer.toString().split(' ')
+      var command = msg[0]
+      var filename = segmentInfo[1]
+      var segmentInfo = msg[2].split(':')
       var start = Number(segmentInfo[1])
       var end = Number(segmentInfo[2])
-      var segmentSize = end - start - 1
-      // console.log(buffer.toString())
+      var segment = utils.createSegment(start, end)
 
-      if(!files[filename]) {
-        files[filename] = fs.readFileSync('./' + peer.name + '/' + filename)
+      //cache file requested if not already cached
+      files[filename] = files[filename] || fs.readFileSync('./' + peer.name + '/' + filename)
+
+      //terminate if segment requested is too large
+      if(segment.size > config.segmentSize) {
+        socket.end()
+        return
       }
 
-      if(command === 'GET' && segmentSize <= config.segmentSize) {
-        var file = files[filename].slice(start, end + 1)
-        socket.write(file)
-
+      if(command === 'GET') {
+        //grab file segment requested and send
+        var fileSegment = files[filename].slice(start, end + 1)
+        socket.write(fileSegment)
       }
-      socket.end()
+
     })
 
     socket.on('end', socket.end)
