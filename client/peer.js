@@ -8,9 +8,7 @@ var path = require('path')
 
 var numPeers = 0
 var socketsOpen = 0
-setInterval(function(){
-  console.log(socketsOpen, 'peer sockets open')
-}, 30000)
+
 module.exports = function(){
   return {
     name: 'Peer' + ++numPeers,
@@ -35,6 +33,12 @@ module.exports = function(){
 
     getFile: function(tracker, cb){
       var me = this
+
+      var periodicUpdate = setInterval(function(){
+        var largestSegment = utils.largestSegment(gaps, filesize)
+        me.updateTracker(largestSegment, tracker)
+      })
+
       //keep track of gaps in file (segments we currently need)
       var gaps = [{
         start: 0,
@@ -71,6 +75,11 @@ module.exports = function(){
           socket.end()
           me.stitchSegments(tracker, segments, cb)
         }
+      })
+
+      socket.on('end', function(){
+        clearInterval(periodicUpdate)
+        socket.end()
       })
 
     },
@@ -152,6 +161,12 @@ module.exports = function(){
     getTracker: function(name, cb) {
       console.log(this.name, 'getting tracker for', name)
       tracker.getTracker(name, cb)
+    },
+
+    updateTracker: function(segment, tracker){
+      var ip = this.server.address().address
+      var port = this.server.address().port
+      tracker.updateTracker(tracker.filename + ' ' + segment.start + ' ' + segment.end + ' ' + ip + ' ' + port, function(){})
     }
   }
 }
