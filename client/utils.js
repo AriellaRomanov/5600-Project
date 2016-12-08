@@ -115,14 +115,18 @@ module.exports = {
   largestSegment: function(gaps, filesize) {
     var utils = this
     var largest = {start: 0, end: 0, size: 0}
-    if(gaps[0].start != 0) { largest = utils.createSegment(0, gaps[0].start - 1) }
+    if (gaps[0].start != 0) { largest = utils.createSegment(0, gaps[0].start - 1) }
+    console.log(largest.size)
     for (var i = 1; i < gaps.length; i++) {
-      if ((gaps[i].end - gaps[i].start + 1) > largest.size) {
+      console.log(gaps[i].start - gaps[i-1].end + 1)
+      if ((gaps[i].start - gaps[i-1].end + 1) > largest.size) {
         largest = utils.createSegment(gaps[i-1].end + 1, gaps[i].start - 1)
       }
     }
-    if ((filesize - gaps[gaps.length-1].end + 1) > largest.size) {
-      largest = utils.createSegment(gaps[gaps.length-1].end + 1, filesize - 1)
+    if (gaps[gaps.length-1].end != (filesize - 1)) {
+      if ((filesize - gaps[gaps.length-1].end + 1) > largest.size) {
+        largest = utils.createSegment(gaps[gaps.length-1].end + 1, filesize - 1)
+      }
     }
     
     return largest
