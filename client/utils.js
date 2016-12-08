@@ -62,6 +62,32 @@ module.exports = {
     return end - start + 1
   },
 
+  //determine if outer segment contains inner
+  segmentContains: function(outer, inner) {
+    return (outer.start <= inner.start) &&
+           (outer.end >= inner.end)
+  },
+
+  //calculate new array of gaps when given segment is attained
+  recalculateGaps: function(gaps, segment) {
+    var utils = this
+    var newGaps = []
+    gaps.forEach(function(gap){
+      //make sure gap contains segment
+      if(utils.segmentContains(gap, segment)) {
+        //calculate the 2 new gaps created
+        var newEnd = segment.start - 1
+        var newStart = segment.end + 1        
+        newGaps.push(utils.createSegment(gap.start, newEnd))
+        newGaps.push(utils.createSegment(newStart, gap.end))
+      } else {
+        //keep this gap in array
+        newGaps.push(gap)
+      }
+    })
+    return newGaps
+  },
+
   //choose a random segment within provided gap that peer has
   chooseRandomSegment: function(gap, peer) {
     //keep start in first third of gap
