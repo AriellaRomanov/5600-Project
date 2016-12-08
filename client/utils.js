@@ -68,6 +68,12 @@ module.exports = {
            (outer.end >= inner.end)
   },
 
+  //determine if 2 segments are equal
+  segmentEquals: function(seg1, seg2) {
+    return (seg1.start === seg2.start) &&
+           (seg1.end === seg2.end)
+  },
+
   //calculate new array of gaps when given segment is attained
   recalculateGaps: function(gaps, segment) {
     var utils = this
@@ -75,7 +81,7 @@ module.exports = {
     gaps.forEach(function(gap){
       //make sure gap contains segment
       if(utils.segmentContains(gap, segment)) {
-        //calculate the 2 new gaps created
+        //calculate the 2 new gaps created on left and right
         var newEnd = segment.start - 1
         var newStart = segment.end + 1        
         newGaps.push(utils.createSegment(gap.start, newEnd))
@@ -85,7 +91,9 @@ module.exports = {
         newGaps.push(gap)
       }
     })
-    return newGaps
+
+    //return gaps, filter out gaps of 0 size
+    return newGaps.filter(function(gap) { return gap.size > 0})
   },
 
   //choose a random segment within provided gap that peer has
